@@ -23,6 +23,37 @@ pub const Mime = struct {
     // type/subtype;parameter=value
     params: []Param,
 
+    fn parse_param(param_string: []const u8) ?Param {
+        // Find the equals sign (=) to split into key and value
+        // const equals_index = p.indexOf('=');
+        const equals_index = std.mem.indexOf(u8, param_string, "=");
+        if (equals_index == null) {
+            // std.debug.print("error: {s}\n", .{"Missing equal sign"});
+            return null;
+        }
+
+        const equals_index_value = equals_index.?;
+        if (equals_index_value == 0 or equals_index_value == param_string.len - 1) {
+            // std.debug.print("error: {s}\n", .{"Invalid range"});
+            return null;
+        }
+
+        const key = param_string[0..equals_index_value];
+        var value = param_string[equals_index_value + 1 ..];
+        value = std.mem.trimRight(u8, value, " \t");
+        // Add the parsed parameter to the list
+        if (!is_valid_param_key(key)) {
+            // std.debug.print("error: {s}\n", .{"Invalid key"});
+            return null;
+        }
+        if (!is_valid_param_value(value)) {
+            // std.debug.print("error: {s}\n", .{"Invalid value"});
+            return null;
+        }
+
+        return Param{ .key = key, .value = value };
+    }
+
     // Function to parse parameters from a string
     fn parse_params(params_string: []const u8) ?[]Param {
         var gpa = std.heap.GeneralPurposeAllocator(.{ .verbose_log = true }){};
@@ -33,42 +64,29 @@ pub const Mime = struct {
         // var param_list = std.mem.splitSequence(u8, params_string, ";");
         // var param_list = std.mem.splitScalar(u8, params_string, ";");
         var param_list = std.mem.splitScalar(u8, params_string, ';');
+
+        if (param_list.index == null) {
+            const param_part = parse_param(params_string);
+            if (param_part == null) {
+                return null;
+            }
+
+            params.append(param_part.?) catch |err| {
+                std.debug.print("error: {any}\n", .{err});
+                return null;
+            };
+        }
+
         while (true) {
             const p = param_list.next();
             if (p == null) {
                 break;
             }
-            // Find the equals sign (=) to split into key and value
-            // const equals_index = p.indexOf('=');
-            const equals_index = std.mem.indexOf(u8, p.?, "=");
-            if (equals_index == null) {
-                std.debug.print("error: {s}\n", .{"Missing equal sign"});
-                continue;
+            const param_part = parse_param(p.?);
+            if (param_part == null) {
+                 continue;
             }
-
-            const equals_index_value = equals_index.?;
-            if (equals_index_value == 0 or equals_index_value == p.?.len - 1) {
-                // std.debug.print("error: {s}\n", .{"Invalid range"});
-                continue;
-            }
-
-            const key = p.?[0..equals_index_value];
-            var value = p.?[equals_index_value + 1 ..];
-            // key = std.mem.trim(u8, key, " \t");
-            // value = std.mem.trimLeft(u8, value, " \t");
-            value = std.mem.trimRight(u8, value, " \t");
-            // Add the parsed parameter to the list
-            // _ = try params.append(Param{ .key = key, .value = value });
-            if (!is_valid_param_key(key)) {
-                // std.debug.print("error: {s}\n", .{"Invalid key"});
-                continue;
-            }
-            if (!is_valid_param_value(value)) {
-                // std.debug.print("error: {s}\n", .{"Invalid value"});
-                continue;
-            }
-
-            params.append(Param{ .key = key, .value = value }) catch |err| {
+            params.append(param_part.?) catch |err| {
                 std.debug.print("error: {any}\n", .{err});
                 continue;
             };
@@ -363,16 +381,12 @@ test "parse params" {
     try testing.expectEqualStrings("utf-8", charset.?);
 
     // TODO: Add more tests
-
     // const foo = mime.?.param("foo");
     // try testing.expect(foo != null);
     // try testing.expectEqualStrings("bar", foo.?);
-
     // const bar = mime.?.param("bar");
     // try testing.expect(bar == null);
 }
-
-
 
 const ParseError = error{
     MissingSlash,
