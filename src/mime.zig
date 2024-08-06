@@ -1,7 +1,4 @@
 const std = @import("std");
-const HeaderIterator = std.http.HeaderIterator;
-
-const testing = std.testing;
 
 /// An IANA media type.
 ///
@@ -93,10 +90,10 @@ pub const Mime = struct {
 
     test parseParams {
         const params = parseParams("charset=utf-8; foo=bar");
-        try testing.expect(params != null);
-        try testing.expectEqual(2, params.?.len);
-        try testing.expectEqualStrings("utf-8", params.?[0].value);
-        try testing.expectEqualStrings("bar", params.?[1].value);
+        try std.testing.expect(params != null);
+        try std.testing.expectEqual(2, params.?.len);
+        try std.testing.expectEqualStrings("utf-8", params.?[0].value);
+        try std.testing.expectEqualStrings("bar", params.?[1].value);
     }
 
     // Function to validate parameter keys
@@ -324,7 +321,7 @@ test "Valid mime type" {
     };
     for (valid_case) |s| {
         const mime_type = Mime.parse(s);
-        try testing.expect(mime_type != null);
+        try std.testing.expect(mime_type != null);
     }
 }
 
@@ -368,24 +365,24 @@ test "Invalid mime type" {
             std.debug.print("invalid_index: {} essence {s} ,basetype: {s}, subtype:{s}, params:{any} \n", .{ i, invalid_type.?.essence, invalid_type.?.basetype, invalid_type.?.subtype, invalid_type.?.params });
         }
 
-        try testing.expect(invalid_type == null);
+        try std.testing.expect(invalid_type == null);
     }
 }
 
 test "parse params" {
     var mime = Mime.parse("text/plain; charset=utf-8; foo=bar");
-    try testing.expect(mime != null);
+    try std.testing.expect(mime != null);
 
     const charset = mime.?.getParam("charset");
-    try testing.expect(charset != null);
-    try testing.expectEqualStrings("utf-8", charset.?);
+    try std.testing.expect(charset != null);
+    try std.testing.expectEqualStrings("utf-8", charset.?);
 
     const foo = mime.?.getParam("foo");
-    try testing.expect(foo != null);
+    try std.testing.expect(foo != null);
 
-    try testing.expectEqualStrings("bar", foo.?);
+    try std.testing.expectEqualStrings("bar", foo.?);
     const bar = mime.?.getParam("bar");
-    try testing.expect(bar == null);
+    try std.testing.expect(bar == null);
 }
 
 const ParseError = error{
