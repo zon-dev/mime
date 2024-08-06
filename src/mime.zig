@@ -23,18 +23,15 @@ pub const Mime = struct {
     // type/subtype;parameter=value
     params: []Param,
 
-    fn parse_param(param_string: []const u8) ?Param {
+    fn parseParam(param_string: []const u8) ?Param {
         // Find the equals sign (=) to split into key and value
-        // const equals_index = p.indexOf('=');
         const equals_index = std.mem.indexOf(u8, param_string, "=");
         if (equals_index == null) {
-            // std.debug.print("error: {s}\n", .{"Missing equal sign"});
             return null;
         }
 
         const equals_index_value = equals_index.?;
         if (equals_index_value == 0 or equals_index_value == param_string.len - 1) {
-            // std.debug.print("error: {s}\n", .{"Invalid range"});
             return null;
         }
 
@@ -42,31 +39,27 @@ pub const Mime = struct {
         var value = param_string[equals_index_value + 1 ..];
         value = std.mem.trimRight(u8, value, " \t");
         // Add the parsed parameter to the list
-        if (!is_valid_param_key(key)) {
-            // std.debug.print("error: {s}\n", .{"Invalid key"});
+        if (!isValidParamKey(key)) {
             return null;
         }
-        if (!is_valid_param_value(value)) {
-            // std.debug.print("error: {s}\n", .{"Invalid value"});
+        if (!isValidParamValue(value)) {
             return null;
         }
 
         return Param{ .key = key, .value = value };
     }
 
-    // Function to parse parameters from a string
-    fn parse_params(params_string: []const u8) ?[]Param {
+    // Function to parse parameters from a character sequence
+    fn parseParams(params_string: []const u8) ?[]Param {
         var gpa = std.heap.GeneralPurposeAllocator(.{ .verbose_log = true }){};
         const allocator = gpa.allocator();
         var params = std.ArrayList(Param).init(allocator);
 
         // Split the input string by semicolons (;) to get individual parameters
-        // var param_list = std.mem.splitSequence(u8, params_string, ";");
-        // var param_list = std.mem.splitScalar(u8, params_string, ";");
         var param_list = std.mem.splitScalar(u8, params_string, ';');
 
         if (param_list.index == null) {
-            const param_part = parse_param(params_string);
+            const param_part = parseParam(params_string);
             if (param_part == null) {
                 return null;
             }
@@ -82,9 +75,9 @@ pub const Mime = struct {
             if (p == null) {
                 break;
             }
-            const param_part = parse_param(p.?);
+            const param_part = parseParam(p.?);
             if (param_part == null) {
-                 continue;
+                continue;
             }
             params.append(param_part.?) catch |err| {
                 std.debug.print("error: {any}\n", .{err});
@@ -92,14 +85,13 @@ pub const Mime = struct {
             };
         }
 
-        // return params.toOwnedSlice();
         if (params.items.len == 0) {
             return null;
         }
 
         return params.items;
     }
-    fn is_valid_param_key(key: []const u8) bool {
+    fn isValidParamKey(key: []const u8) bool {
         if (key.len == 0) return false;
         // Example validation: Ensure the key contains only printable ASCII characters
         for (key) |c| {
@@ -114,7 +106,7 @@ pub const Mime = struct {
     }
 
     // Function to validate parameter values
-    fn is_valid_param_value(value: []const u8) bool {
+    fn isValidParamValue(value: []const u8) bool {
         // Example validation: Ensure the value is non-empty
         if (value.len == 0) return false;
 
@@ -133,7 +125,7 @@ pub const Mime = struct {
     }
 
     // Helper function to check if a part contains only valid characters
-    fn is_valid_type(part: []const u8) bool {
+    fn isValidType(part: []const u8) bool {
         for (part) |c| {
             if (!std.ascii.isAlphanumeric(c) and c != '-') {
                 return false;
@@ -158,15 +150,13 @@ pub const Mime = struct {
 
         if (type_part.len == 0 or subtype_part.len == 0) return null; // Must have non-empty type and subtype
 
-        // for (type_part) |c| if (!is_valid_type(c)) return null;
-        if (!is_valid_type(type_part)) return null;
+        if (!isValidType(type_part)) return null;
 
         const subtype_index = std.mem.indexOf(u8, subtype_part, ";");
         if (subtype_index == null) {
             // Remove any trailing HTTP whitespace from subtype.
             subtype_part = std.mem.trimRight(u8, subtype_part, " \t");
-            // for (subtype_part) |c| if (!is_valid_type(c)) return null;
-            if (!is_valid_type(subtype_part)) return null;
+            if (!isValidType(subtype_part)) return null;
 
             return .{ .essence = mime_type, .basetype = type_part, .subtype = subtype_part, .is_utf8 = false, .params = &[_]Param{} };
         }
@@ -177,8 +167,7 @@ pub const Mime = struct {
 
         // Remove any trailing HTTP whitespace from subtype.
         subtype = std.mem.trimRight(u8, subtype, " \t");
-        // for (subtype) |c| if (!is_valid_type(c)) return null;
-        if (!is_valid_type(subtype)) return null;
+        if (!isValidType(subtype)) return null;
 
         // params should not be null
         var params_part = subtype_part[subtype_index.? + 1 ..];
@@ -186,7 +175,7 @@ pub const Mime = struct {
         params_part = std.mem.trimLeft(u8, params_part, " \t");
 
         // Validate optional parameters
-        const params = parse_params(params_part);
+        const params = parseParams(params_part);
         if (params == null) return null;
 
         // return type_part.all(is_valid_char) and subtype_part.all(is_valid_char);
@@ -215,7 +204,7 @@ pub const Mime = struct {
     }
 
     /// Get a reference to a param.
-    pub fn param(self: *Mime, name: []const u8) ?[]const u8 {
+    pub fn getParam(self: *Mime, name: []const u8) ?[]const u8 {
         for (self.params) |pair| {
             if (std.ascii.eqlIgnoreCase(pair.key, name)) {
                 return pair.value;
@@ -377,7 +366,8 @@ test "parse params" {
     var mime = Mime.parse("text/plain; charset=utf-8; foo=bar");
     try testing.expect(mime != null);
 
-    const charset = mime.?.param("charset");
+    const charset = mime.?.getParam("charset");
+    try testing.expect(charset != null);
     try testing.expectEqualStrings("utf-8", charset.?);
 
     // TODO: Add more tests
@@ -389,21 +379,16 @@ test "parse params" {
 }
 
 const ParseError = error{
+    /// a slash (/) was missing between the type and subtype
     MissingSlash,
+    /// an equals sign (=) was missing between a parameter and its value
     MissingEqual,
+    /// a quote (\") was missing from a parameter value
     MissingQuote,
+    /// invalid token
     InvalidToken,
+    /// unexpected asterisk
     InvalidRange,
+    /// the string is too long
     TooLong,
 };
-
-// fn formatParseError(e: ParseError, writer: *std.io.AnyWriter) !void {
-//     const description = switch (e) {
-//         ParseError.MissingSlash => "a slash (/) was missing between the type and subtype",
-//         ParseError.MissingEqual => "an equals sign (=) was missing between a parameter and its value",
-//         ParseError.MissingQuote => "a quote (\") was missing from a parameter value",
-//         ParseError.InvalidToken => "invalid token",
-//         ParseError.InvalidRange => "unexpected asterisk",
-//         ParseError.TooLong => "the string is too long",
-//     };
-// }
