@@ -10,7 +10,6 @@ try std.testing.expect(std.mem.eql(u8, mime.?.essence, "text/plain; charset=utf-
 try std.testing.expect(std.mem.eql(u8, mime.?.basetype, "text"));
 try std.testing.expect(std.mem.eql(u8, mime.?.subtype, "plain"));
 
-
 const charset = mime.?.getParam("charset");
 try testing.expectEqualStrings("utf-8", charset.?);
 
