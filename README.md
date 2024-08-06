@@ -1,5 +1,5 @@
 # mime
-Support MIME (HTTP Media Types) as strong types in Zig.
+Support MIME (HTTP Media Types) types parse in Zig.
 
 
 ### Usage:
