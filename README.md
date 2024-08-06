@@ -4,7 +4,7 @@ Support MIME (HTTP Media Types) types parse in Zig.
 
 ### Usage:
 ```zig
-var mime = Mime.parse("text/plain; charset=utf-8; foo=bar");
+var mime = Mime.parse(std.heap.page_allocator, "text/plain; charset=utf-8; foo=bar");
 try std.testing.expect(mime != null);
 try std.testing.expect(std.mem.eql(u8, mime.?.essence, "text/plain; charset=utf-8; foo=bar"));
 try std.testing.expect(std.mem.eql(u8, mime.?.basetype, "text"));
