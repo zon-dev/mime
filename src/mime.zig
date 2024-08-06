@@ -35,13 +35,15 @@ pub const Mime = struct {
             return null;
         }
 
-        const key = param_string[0..equals_index_value];
-        var value = param_string[equals_index_value + 1 ..];
-        value = std.mem.trimRight(u8, value, " \t");
+        var key = param_string[0..equals_index_value];
+        key = std.mem.trimLeft(u8, key, " \t");
         // Add the parsed parameter to the list
         if (!isValidParamKey(key)) {
             return null;
         }
+
+        var value = param_string[equals_index_value + 1 ..];
+        value = std.mem.trimRight(u8, value, " \t");
         if (!isValidParamValue(value)) {
             return null;
         }
@@ -58,16 +60,13 @@ pub const Mime = struct {
         // Split the input string by semicolons (;) to get individual parameters
         var param_list = std.mem.splitScalar(u8, params_string, ';');
 
-        if (param_list.index == null) {
+        if (param_list.buffer.len == 0) {
             const param_part = parseParam(params_string);
             if (param_part == null) {
                 return null;
             }
 
-            params.append(param_part.?) catch |err| {
-                std.debug.print("error: {any}\n", .{err});
-                return null;
-            };
+            params.append(param_part.?) catch return null;
         }
 
         while (true) {
@@ -91,6 +90,16 @@ pub const Mime = struct {
 
         return params.items;
     }
+
+    test parseParams {
+        const params = parseParams("charset=utf-8; foo=bar");
+        try testing.expect(params != null);
+        try testing.expectEqual(2, params.?.len);
+        try testing.expectEqualStrings("utf-8", params.?[0].value);
+        try testing.expectEqualStrings("bar", params.?[1].value);
+    }
+
+    // Function to validate parameter keys
     fn isValidParamKey(key: []const u8) bool {
         if (key.len == 0) return false;
         // Example validation: Ensure the key contains only printable ASCII characters
@@ -153,6 +162,7 @@ pub const Mime = struct {
         if (!isValidType(type_part)) return null;
 
         const subtype_index = std.mem.indexOf(u8, subtype_part, ";");
+
         if (subtype_index == null) {
             // Remove any trailing HTTP whitespace from subtype.
             subtype_part = std.mem.trimRight(u8, subtype_part, " \t");
@@ -370,12 +380,12 @@ test "parse params" {
     try testing.expect(charset != null);
     try testing.expectEqualStrings("utf-8", charset.?);
 
-    // TODO: Add more tests
-    // const foo = mime.?.param("foo");
-    // try testing.expect(foo != null);
-    // try testing.expectEqualStrings("bar", foo.?);
-    // const bar = mime.?.param("bar");
-    // try testing.expect(bar == null);
+    const foo = mime.?.getParam("foo");
+    try testing.expect(foo != null);
+
+    try testing.expectEqualStrings("bar", foo.?);
+    const bar = mime.?.getParam("bar");
+    try testing.expect(bar == null);
 }
 
 const ParseError = error{
