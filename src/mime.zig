@@ -14,8 +14,6 @@ pub const Mime = struct {
     // html (HTML source code), or calendar (for iCalendar/.ics) files.
     subtype: []const u8,
 
-    is_utf8: bool,
-
     // An optional parameter can be added to provide additional details:
     // type/subtype;parameter=value
     params: []Param,
@@ -162,7 +160,7 @@ pub const Mime = struct {
             subtype_part = std.mem.trimRight(u8, subtype_part, " \t");
             if (!isValidType(subtype_part)) return null;
 
-            return .{ .essence = mime_type, .basetype = type_part, .subtype = subtype_part, .is_utf8 = false, .params = &[_]Param{} };
+            return .{ .essence = mime_type, .basetype = type_part, .subtype = subtype_part, .params = &[_]Param{} };
         }
 
         var subtype = subtype_part[0..subtype_index.?];
@@ -183,7 +181,7 @@ pub const Mime = struct {
         if (params == null) return null;
 
         // return type_part.all(is_valid_char) and subtype_part.all(is_valid_char);
-        return .{ .essence = mime_type, .basetype = type_part, .subtype = subtype, .is_utf8 = false, .params = params.? };
+        return .{ .essence = mime_type, .basetype = type_part, .subtype = subtype, .params = params.? };
     }
 
     /// Create a new `Mime`.
@@ -205,11 +203,6 @@ pub const Mime = struct {
 
     /// Remove a param from the set. Returns the `ParamValue` if it was contained within the set.
     pub fn removeParam(self: *Mime, key: []const u8) ?[]const u8 {
-        if (std.ascii.eqlIgnoreCase(key, "charset") and self.is_utf8) {
-            self.is_utf8 = false;
-            return "utf-8";
-        }
-
         var index: usize = 0;
         while (index < self.params.len) : (index += 1) {
             if (std.mem.eql(u8, self.params[index].key, key)) {
@@ -300,9 +293,12 @@ test "Invalid mime type" {
     }
 }
 
-test "parse params" {
+test "parse and params" {
     var mime = Mime.parse("text/plain; charset=utf-8; foo=bar");
     try std.testing.expect(mime != null);
+    try std.testing.expect(std.mem.eql(u8, mime.?.essence, "text/plain; charset=utf-8; foo=bar"));
+    try std.testing.expect(std.mem.eql(u8, mime.?.basetype, "text"));
+    try std.testing.expect(std.mem.eql(u8, mime.?.subtype, "plain"));
 
     const charset = mime.?.getParam("charset");
     try std.testing.expect(charset != null);
