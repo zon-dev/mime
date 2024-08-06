@@ -75,10 +75,7 @@ pub const Mime = struct {
             if (param_part == null) {
                 continue;
             }
-            params.append(param_part.?) catch |err| {
-                std.debug.print("error: {any}\n", .{err});
-                continue;
-            };
+            params.append(param_part.?) catch continue;
         }
 
         if (params.items.len == 0) {
@@ -196,20 +193,6 @@ pub const Mime = struct {
         return parse(s);
     }
 
-    pub fn fromExtension(extension: []const u8) ?Mime {
-        switch (extension) {
-            "html"[0..] => return HTML,
-            "js"[0..] => return JAVASCRIPT,
-            "mjs"[0..] => return JAVASCRIPT,
-            "jsonp"[0..] => return JAVASCRIPT,
-            "json"[0..] => return JSON,
-            "css"[0..] => return CSS,
-            "svg"[0..] => return SVG,
-            "xml"[0..] => return XML,
-            else => return null,
-        }
-    }
-
     /// Get a reference to a param.
     pub fn getParam(self: *Mime, name: []const u8) ?[]const u8 {
         for (self.params) |pair| {
@@ -246,54 +229,6 @@ const Param = struct {
     // value: ParamValue,
     key: []const u8,
     value: []const u8,
-};
-
-const HTML = Mime{
-    .essence = "text/html",
-    .basetype = "text",
-    .subtype = "html",
-    .is_utf8 = true,
-    .params = &[_]Param{},
-};
-
-const JAVASCRIPT = Mime{
-    .essence = "text/javascript",
-    .basetype = "text",
-    .subtype = "javascript",
-    .is_utf8 = true,
-    .params = &[_]Param{},
-};
-
-const JSON = Mime{
-    .essence = "application/json",
-    .basetype = "application",
-    .subtype = "json",
-    .is_utf8 = true,
-    .params = &[_]Param{},
-};
-
-const CSS = Mime{
-    .essence = "text/css",
-    .basetype = "text",
-    .subtype = "css",
-    .is_utf8 = true,
-    .params = &[_]Param{},
-};
-
-const SVG = Mime{
-    .essence = "image/svg+xml",
-    .basetype = "image",
-    .subtype = "svg+xml",
-    .is_utf8 = true,
-    .params = &[_]Param{},
-};
-
-const XML = Mime{
-    .essence = "application/xml",
-    .basetype = "application",
-    .subtype = "xml",
-    .is_utf8 = true,
-    .params = &[_]Param{},
 };
 
 test "Valid mime type" {
@@ -359,12 +294,8 @@ test "Invalid mime type" {
         "text/plain; charset= utf-8",
     };
 
-    for (invalid_case, 0..) |invalid_s, i| {
+    for (invalid_case) |invalid_s| {
         const invalid_type = Mime.parse(invalid_s);
-        if (invalid_type != null) {
-            std.debug.print("invalid_index: {} essence {s} ,basetype: {s}, subtype:{s}, params:{any} \n", .{ i, invalid_type.?.essence, invalid_type.?.basetype, invalid_type.?.subtype, invalid_type.?.params });
-        }
-
         try std.testing.expect(invalid_type == null);
     }
 }
