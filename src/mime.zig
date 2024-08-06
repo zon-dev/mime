@@ -13,7 +13,7 @@ const test_allocator = std.testing.allocator;
 ///
 /// Read more: https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types
 pub const Mime = struct {
-    allocator: Allocator = std.heap.page_allocator,
+    allocator: Allocator,
 
     essence: []const u8 = "",
 
@@ -173,6 +173,7 @@ pub const Mime = struct {
             subtype_part = mem.trimRight(u8, subtype_part, " \t");
             if (!isValidType(subtype_part)) return null;
             return .{
+                .allocator = allocator,
                 .essence = mime_type,
                 .basetype = type_part,
                 .subtype = subtype_part,
@@ -198,6 +199,7 @@ pub const Mime = struct {
         if (params == null) return null;
 
         return .{
+            .allocator = allocator,
             .essence = mime_type,
             .basetype = type_part,
             .subtype = subtype,
@@ -213,17 +215,24 @@ pub const Mime = struct {
             return null;
         }
 
+        // TODO: Check if the essence is valid
+        if (self.essence.len != 0 and self.params.len != 0) {
+            return null;
+        }
+
         if (self.params.len == 0) {
             // The essence is the full MIME type string.
             const essence_content = fmt.allocPrint(self.allocator, "{s}/{s}", .{ self.basetype, self.subtype }) catch return null;
 
             defer self.allocator.free(essence_content);
             return .{
+                .allocator = self.allocator,
                 .essence = essence_content,
                 .basetype = self.basetype,
                 .subtype = self.subtype,
             };
         }
+
         for (self.params) |param| {
             if (param.key.len == 0 or param.value.len == 0) {
                 return null;
@@ -234,6 +243,7 @@ pub const Mime = struct {
         }
 
         return .{
+            .allocator = self.allocator,
             .basetype = self.basetype,
             .subtype = self.subtype,
             .params = self.params,
